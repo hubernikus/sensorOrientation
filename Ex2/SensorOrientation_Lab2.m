@@ -64,5 +64,5 @@ for ii = [1,3]
     plot(t_a(1:N_sample), a(1:N_sample,ii),c(ii)); hold on;
 end
 xlim([t_a(1,1),t_a(N_sample,1)])
-grind; 
+grid on; 
 
