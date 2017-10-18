@@ -41,28 +41,51 @@ load(strcat(dataPath, 'imu6_Phone.mat'));
 N_max = 10^10;
 N_sample = min(size(dataIMAR,1), N_max);
 
-% Gyroscope Data
-% figure(1001);
-% for ii = 1:3
-%     plot(dataIMAR(1:N_sample,1), dataIMAR(1:N_sample,ii+1),c(ii)); hold on;
-% end
-% xlim([dataIMAR(1,1),dataIMAR(N_sample,1)])
 
-figure(1);
+dt_IMAR = round(mean(dataIMAR(2:N_sample,1) - dataIMAR(1:N_sample-1,1)),5);
+
+figure;
 for ii = [1,3]
     plot(dataIMAR(1:N_sample,1)-dataIMAR(1,1), dataIMAR(1:N_sample,ii+4),c(ii)); hold on;
 end
 xlim([dataIMAR(1,1),dataIMAR(N_sample,1)]-dataIMAR(1,1))
 grid on;
-
+xlabel('Time [s]','Interpreter','latex'); ylabel('Accelerometer measurement [$m/s^2$]','Interpreter','latex')
+legend('x direction','z direction')
 
 %% Phone Analysis
 N_sample = min(size(t_a,1), N_max);
+
+dt_phone = round(mean(t_a(2:N_sample)-t_a(1:N_sample-1)),5)
 
 figure(2);
 for ii = [1,3]
     plot(t_a(1:N_sample), a(1:N_sample,ii),c(ii)); hold on;
 end
 xlim([t_a(1,1),t_a(N_sample,1)])
-grid on; 
+
+xlabel('Time [s]','Interpreter','latex'); 
+ylabel('Accelerometer measurement [$m/s^2$]','Interpreter','latex')
+legend('x direction','z direction')
+grid on;
+
+
+%% Correlation analysis
+% 
+%figure(3);
+DATA = [dataIMAR(1:N_sample,6),dataIMAR(1:N_sample,4)];
+[ sigma_corr, sigma_sig, ind_e1 ] = signalAnalysis(DATA,'Datanalysis_IMAR');
+
+% z first, x second 
+DATA = [a(1:N_sample,3),a(1:N_sample,1)];
+[ sigma_corr, sigma_sig, ind_e1 ] = signalAnalysis(DATA,'Datanalysis_mobilePhone');
+
+
+
+
+
+%     % Autocorrelation Using User defined Formulla
+%     [phi, xAxis, sigma(i)] = autocorrelation(DATA(:,i));
+%     Nc = length(phi);
+%     plot(xAxis,phi, cols(i)); hold on;   
 

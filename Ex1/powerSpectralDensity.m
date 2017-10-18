@@ -21,7 +21,7 @@ end
 % Length of signal
 N = length(x);
 
-Pxx = pwelch(x,hanning(N*0.4));
+Pxx = pwelch(x,hanning(round(N*0.4)));
 
 % Correpsonding frequencies
 freq = [Fs/length(Pxx):Fs/length(Pxx):Fs]';
