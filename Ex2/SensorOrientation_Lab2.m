@@ -54,7 +54,8 @@ for ii = [1,3]
 end
 xlim([dataIMAR(1,1),dataIMAR(N_sample,1)]-dataIMAR(1,1))
 grid on;
-
+xlabel('Sample []','Interpreter','latex'); ylabel('Accelerometer measurement [$m/s^2$]','Interpreter','latex')
+legend('x direction','z direction')
 
 %% Phone Analysis
 N_sample = min(size(t_a,1), N_max);
@@ -64,5 +65,12 @@ for ii = [1,3]
     plot(t_a(1:N_sample), a(1:N_sample,ii),c(ii)); hold on;
 end
 xlim([t_a(1,1),t_a(N_sample,1)])
-grind; 
+xlabel('Sample []','Interpreter','latex'); 
+ylabel('Accelerometer measurement [$m/s^2$]','Interpreter','latex')
+legend('x direction','z direction')
+grid on;
+
+
+%% Correlation analysis
+
 
