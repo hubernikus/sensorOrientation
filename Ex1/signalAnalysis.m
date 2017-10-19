@@ -49,6 +49,24 @@ xlabel('Frequency [log]'); ylabel('Power Spectral Density [log]')
 xlim([min(freq1),max(freq1)]); 
 ylim([yRange(1)*0.9, yRange(2)*1.1]);
 
+
+figure;
+subplot(4,1,4)
+yRange = [1,1];
+Fs = 1; % Default frequency: 1Hz
+for i = 1:N
+    % PSD Using User defined Formulla
+    allan_DATA= allandev(DATA(:,i),'AllanDev');
+    loglog(allan_DATA, cols(i)); hold on;
+    yRange(1) = min(yRange(1), min(allan_DATA));
+    yRange(2) = max(yRange(2), max(allan_DATA));
+end
+xlabel('Frequency [log]'); ylabel('Power Spectral Density [log]')
+xlim([min(freq1),max(freq1)]); 
+ylim([yRange(1)*0.9, yRange(2)*1.1]);
+
+
+
 %print(strcat('fig/',figName),'-dpdf')
 print(strcat('fig/',figName),'-depsc')
 
