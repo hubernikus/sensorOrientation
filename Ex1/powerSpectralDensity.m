@@ -23,8 +23,13 @@ N = length(x);
 
 Pxx = pwelch(x,hanning(round(N*0.4)));
 
+
 % Correpsonding frequencies
-freq = [Fs/length(Pxx):Fs/length(Pxx):Fs]';
+freq = [-(Fs-Fs/length(Pxx)):Fs/length(Pxx):Fs-Fs/length(Pxx)]';
+
+
+Pxx =  [flip(Pxx(2:end));Pxx]; % create symmetry
+    
 
 end
 

@@ -1,4 +1,4 @@
-function [phi, xAxis, sigma,pass_e1] = autocorrelation(z)
+function [phi, xAxis, sigma,T] = autocorrelation(z)
 % AUTOCORELLATION - CACLULATION OF THE AUTOCORRELATION OF A FUNCION
 %
 % -------------------------------------------------------------------------
@@ -23,6 +23,7 @@ phi = phi/phi(N); % Normalize
 xAxis = (-(N-1):N-1)'; % Normalize
 
 % Find the position where the autocorrelation passed the value e^-1
-pass_e1 = find(phi< exp(-1),1)-N; 
+pass_e1 = find(phi(N+1:end)< exp(-1),1); % symetric, first value on the left is found.
+T = pass_e1
 
 end
