@@ -10,7 +10,7 @@
 
 clc; close all; clear variables;
 
-addpath(genpath('../functions'))
+%addpath(genpath('functions'))
 
 %%
 % Colors used for plots
@@ -35,9 +35,9 @@ N_data = 2000; % number of generated data samples
 
 
 % Task 2 - tratdown inertial navigation
-[] = inertialNavigation(x0, vel0, acc_body, gyro_mb, dT)
+[x_sim, y_sim] = inertialNavigation(x0, vel0, acc_body, yro_mb, dT)
 
-omega = omega0* ones(1,N_data);
+omega = omega0* ones(1,N_data);g
 t = dT*(1:N_data+1);
 
 delta_phi = omega.*(t(2:end)-t(1:end-1))+phi0;
