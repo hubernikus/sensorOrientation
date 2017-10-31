@@ -10,11 +10,7 @@
 
 clc; close all; clear variables;
 
-%addpath(genpath('functions'))
-
-%%
-% Colors used for plots
-cols = [1 0 0; 0 1 0; 0 0 1; 0.7 1 0.7; 0.5 0.7 1];
+%% Simulation
 
 % Initial conditions
 omega0 = pi/100;     % [rad/s]
@@ -25,99 +21,173 @@ x0 = [0;r_circ];
 vel0 = [-omega0*r_circ;0]; % initial velocity
 initHeading = [phi0+azim_init];
 
-% Sample time
-sampleRate = 1; % [Hz]
-
-% Real position
-% t_final = 2*pi/omega0;
-% time = 0:1/sampleRate:t_final;
-%x_real_10hz = r_circ*[cos(time*omega0+phi0); sin(time*omega0+phi0)];
-%v_real_10hz = [x_real_10hz(:,2:end)-x_real_10hz(:,1:end-1)]*sampleRate;
-
-%dT = 1/sampleRate; % Time Step
-
-%N_data = length(time); % number of generated data samples
-
-% Task 1 - Simulation of nominal measurment
-[acc_body_10hz, gyro_mb_10hz, x_real_10hz, v_real_10hz] = IMUsens_simulation(sampleRate, omega0, phi0, r_circ,);
-
-% Task 2 - tratdown inertial navigation
+% Create variables
 x_sim =[]; v_sim =[]; phi_sim = [];
+
+% Create measurement 1 - 10 Hz
+sampleRate = 10; % [Hz]
+[acc_body_10hz, gyro_mb_10hz, x_real_10hz, v_real_10hz, phi_real_10hz, time_10hz] = IMUsens_simulation(sampleRate, omega0, r_circ, phi0, azim_init);
 
 intOrder = 1;
 i = 1;
-[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_10hz, gyro_mb_10hz, time,intOrder);
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_10hz, gyro_mb_10hz, time_10hz,intOrder);
 
 intOrder = 2;
 i = 2;
-[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_10hz, gyro_mb_10hz, time,intOrder);
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_10hz, gyro_mb_10hz, time_10hz,intOrder);
 
+% Create measurement 2 - 100Hz
 sampleRate100 = 100;
-
-[acc_body_100hz, gyro_mb_100hz, x_real_100hz, v_real_100hy] = IMUsens_simulation(sampleRate, omega0, phi0, r_circ);
+[acc_body_100hz, gyro_mb_100hz, x_real_100hz, v_real_100hz, phi_real_100hz, time_100hz] = IMUsens_simulation(sampleRate100, omega0, r_circ, phi0, azim_init);
 
 intOrder = 1;
 i=3;
-[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_100hz, gyro_mb_100hz, time,intOrder);
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_100hz, gyro_mb_100hz, time_100hz,intOrder);
 
 intOrder = 2;
 i=4;
-[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_100hz, gyro_mb_100hz, time,intOrder);
-%%
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_body_100hz, gyro_mb_100hz, time_100hz,intOrder);
+
+
+%% Calculate Error - Postition
+
+lineName = {'10Hz, 1st order', '10Hz, 2st order','100Hz, 1st order','100Hz, 2st order'};
 close all;
-figure;
-subplot(1,2,1)
-plot(x_real_10hz(1,:),x_real_10hz(2,:),'b'); hold on;
-plot(x_real_10hz(1,1),x_real_10hz(2,1),'bx')
-plot(x_real_10hz(1,end),x_real_10hz(2,end),'bo')
 
-plot(x_sim{1}(1,:),x_sim{1}(2,:),'r-'); 
-plot(x_sim{1}(1,1),x_sim{1}(2,1),'rx')
-plot(x_sim{1}(1,end),x_sim{1}(2,end),'ro')
-xlabel('Position x [m]'); ylabel('Position z [m]');
+max_posErrs = zeros(length(x_sim),3);
+
+figure('Position',[0,0,800,1200]); % Plot results
+set(groot,'DefaultAxesFontSize',14)
+set(groot,'DefaultLineLineWidth',1.2)
+
+err_pos = [];
+h1 = subplot(3,1,1);
+ylabel('Position error east [m]')
+h2 = subplot(3,1,2);
+ylabel('Position error north [m]')
+h3 = subplot(3,1,3);
+ylabel('Total position Error [m]'); xlabel('Azimuth [deg]')
+
+for i = 1:length(x_sim)
+    if i <=2 % 10hz
+        x_real = x_real_10hz;
+        phi_real = phi_real_10hz*180/pi;
+    else
+        x_real = x_real_100hz;
+        phi_real = phi_real_100hz*180/pi;
+    end
+          
+    err_pos{i} = x_sim{i}-x_real;
+    hold(h1,'on')
+    plot(h1, phi_real, err_pos{i}(1,:)); 
+    hold(h2,'on')
+    plot(h2, phi_real, err_pos{i}(2,:));  
+    hold(h3,'on')
+    absErr = sqrt(sum(err_pos{i}.^2,1));
+    plot(h3, phi_real, absErr); 
+    
+    % Maximal errors
+    max_posErrors(i,1) = max(abs(err_pos{i}(1,:)));
+    max_posErrors(i,2) = max(abs(err_pos{i}(2,:)));
+    max_posErrors(i,3) = max(absErr);
+end
+
+hold off;
+subplot(3,1,2)
+legend(lineName,'Location','northwest')
+
+print(strcat('fig/','Error_position'),'-depsc')
 
 
-% subplot(1,2,2)
-% plot(v_real_10hz(1,:),v_real_10hz(2,:),'b'); hold on;
-% plot(v_real_10hz(1,1),v_real_10hz(2,1),'bx')
-% plot(v_real_10hz(1,end),v_real_10hz(2,end),'bo')
-% 
-% plot(v_sim_10hz_o1(1,:),v_sim_10hz_o1(2,:),'r'); 
-% plot(v_sim_10hz_o1(1,1),v_sim_10hz_o1(2,1),'rx')
-% plot(v_sim_10hz_o1(1,end),v_sim_10hz_o1(2,end),'ro')
-% xlabel('Speed x [m/s]'); ylabel('Speed z [m/s]');
+%% Calculate Error -- Velocity
+
+figure('Position',[0,0,800,1200]); % Plot results
+set(groot,'DefaultAxesFontSize',14)
+set(groot,'DefaultLineLineWidth',1.2)
+
+max_velErrors = zeros(length(x_sim),3);
+
+error_vel = [];
+h1 = subplot(3,1,1);
+ylabel('Velocity error east [m/s]')
+h2 = subplot(3,1,2);
+ylabel('Veloctiy erro north [m/s]')
+h3 = subplot(3,1,3);
+ylabel('Total velocty Error [m/s]'); xlabel('Azimuth [deg]')
+
+for i = 1:length(x_sim)
+    if i <=2 % 10hz
+        v_real = v_real_10hz;
+        phi_real = phi_real_10hz*180/pi;
+    else
+        v_real = v_real_100hz;
+        phi_real = phi_real_100hz*180/pi;
+    end
+          
+    err_vel{i} = v_sim{i}(:,1:end-1)-v_real;
+    hold(h1,'on')
+    plot(h1, phi_real(1:end-1), err_vel{i}(1,:)); 
+    hold(h2,'on')
+    plot(h2, phi_real(1:end-1), err_vel{i}(2,:));  
+    hold(h3,'on')
+    absErr = sqrt(sum(err_vel{i}.^2,1));
+    plot(h3, phi_real(1:end-1), absErr); 
+    
+    % Maximal errors
+    max_velErrors(i,1) = max(abs(err_vel{i}(1,:)));
+    max_velErrors(i,2) = max(abs(err_vel{i}(2,:)));
+    max_velErrors(i,3) = max(absErr);
+end
+
+hold off;
+subplot(3,1,2)
+legend(lineName,'Location','west')
+
+print(strcat('fig/','Error_vel'),'-depsc')
 
 
+%% Calculate Error -- Azimuth
 
-% figure;
-% subplot(3,1,1)
-% plot(time,x_real_10hz(1,:),'b'); hold on;
-% plot(time,x_real_10hz(2,:),'r')
-% plot(time,x_sim_10hz_o1(1,:),'b--');
-% plot(time,x_sim_10hz_o1(2,:),'r--'); 
-% legend('Real x', 'Real y', 'Simulated x', 'Simulated y')
-% ylabel('Position')
-% 
-% subplot(3,1,2)
-% plot(time(1:end-1),v_real_10hz(1,:),'b'); hold on;
-% plot(time(1:end-1),v_real_10hz(2,:),'r')
-% plot(time(1:end),v_sim_10hz_o1(1,:),'b--');
-% plot(time(1:end),v_sim_10hz_o1(2,:),'r--'); 
-% legend('Real x', 'Real y', 'Simulated x', 'Simulated y')
-% ylabel('Velocity [m/s]')
-% 
-% subplot(3,1,3)
-% plot(time, time*omega0+initHeading,'b','linewidth',2); hold on;
-% plot(time,phi_sim_10hz_o1(:),'r'); 
-% xlabel('Time[s]'); ylabel('Rotation [rad]');
+figure('Position',[0,0,800,600]);  % Plot results
+set(groot,'DefaultAxesFontSize',14)
+set(groot,'DefaultLineLineWidth',1.2)
+
+max_angErrors = zeros(length(x_sim),1);
+
+error_vel = [];
+
+for i = 1:length(x_sim)
+    if i <=2 % 10hz
+        phi_real = phi_real_10hz*180/pi;
+    else
+        phi_real = phi_real_100hz*180/pi;
+    end
+    
+    err_phi{i} = phi_sim{i}*180/pi-phi_real;
+    absErr = abs(err_phi{i}); 
+    max_angErrors(i) = max(absErr);
+    
+    plot(phi_real, absErr); hold on; 
+    
+end
+
+ylabel('Total azimuth error [deg]'); xlabel('Real Azimuth [deg]')
+legend(lineName,'Location','west')
+
+print(strcat('fig/','Error_ang'),'-depsc')
 
 
-%%
-figure;
+%% Print table to LATEX
 
-v2 = (x_sim(:,2:end)-x_sim(:,1:end-1))/dT;
-
-plot(v2(1,:));hold on;
-plot(v2(2,:)); 
-
-%%
+fileID = fopen('table_errors.tex','w');
+fprintf(fileID,'Error x [m]& %3.2f & %3.2f & %3.2f & %3.2f  \\\\ \\hline \n',max_posErrors(:,1));
+fprintf(fileID,'Error y [m]& %3.2f & %3.2f & %3.2f & %3.2f  \\\\ \\hline \n',max_posErrors(:,2));
+fprintf(fileID,'Error total [m]& %3.2f & %3.2f & %3.2f & %3.2f  \\\\ \\hline  \\hline  \n',max_posErrors(:,3));
+pow = -5;
+fprintf(fileID,'Error $v_x $ [1e%d m/s] & %3.2f & %3.2f& %3.2f & %3.2f\\\\ \\hline \n',pow, max_velErrors(:,1)*10^(-pow));
+pow = -2;
+fprintf(fileID,'Error  $v_y$ [1e%d m/s] & %3.2f & %3.2f& %3.2f & %3.2f\\\\ \\hline \n',pow, max_velErrors(:,2)*10^(-pow));
+fprintf(fileID,'Error $v_{tot} $ [1e%d m/s] & %3.2f & %3.2f& %3.2f & %3.2f\\\\ \\hline \\hline \n',pow, max_velErrors(:,3)*10^(-pow));
+pow = -10;
+fprintf(fileID,'Angle [1e%d deg]& %3.2f & %3.2f & %3.2f & %3.2f \\\\ \\hline',pow, max_angErrors*10^(-pow));
+fclose(fileID);
