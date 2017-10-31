@@ -17,22 +17,21 @@ clc; close all; clear variables;
 cols = [1 0 0; 0 1 0; 0 0 1; 0.7 1 0.7; 0.5 0.7 1];
 
 % Initial conditions
-phi0 = 0; 
 omega0 = pi/100;     % [rad/s]
 r_circ = 500;       % [m]
 azim_init = 90/180*pi; % [rad]
-phi0 = 0;
+phi0 = 90/180*pi;
 x0 = [0;r_circ];
 vel0 = [-omega0*r_circ;0]; % initial velocity
 initHeading = [phi0+azim_init];
 
 % Sample time
-sampleRate = 100; % [Hz]
+sampleRate = 1; % [Hz]
 
 % Real position
 t_final = 2*pi/omega0;
 time = 0:1/sampleRate:t_final;
-x_real_mb = r_circ*[cos(time*omega0+initHeading); sin(time*omega0+initHeading)];
+x_real_mb = r_circ*[cos(time*omega0+phi0); sin(time*omega0+phi0)];
 v_real_mb = [x_real_mb(:,2:end)-x_real_mb(:,1:end-1)]*sampleRate;
 
 dT = 1/sampleRate; % Time Step
@@ -43,7 +42,7 @@ N_data = length(time); % number of generated data samples
 [acc_body_10hz, gyro_mb_10hz] = IMUsens_simulation(N_data, sampleRate, omega0, r_circ);
 
 % Task 2 - tratdown inertial navigation
-intOrder = 1;
+intOrder = 2;
 [x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc_body_10hz, gyro_mb_10hz, time,intOrder);
 
 %%
@@ -66,8 +65,8 @@ plot(v_real_mb(1,:),v_real_mb(2,:),'b'); hold on;
 plot(v_real_mb(1,1),v_real_mb(2,1),'bx')
 plot(v_real_mb(1,end),v_real_mb(2,end),'bo')
 
-plot(v_sim(1,:),v_sim(2,:),'rx'); 
-plot(v_sim(1,1),v_sim(2,1),'r-')
+plot(v_sim(1,:),v_sim(2,:),'r'); 
+plot(v_sim(1,1),v_sim(2,1),'rx')
 plot(v_sim(1,end),v_sim(2,end),'ro')
 
 xlabel('Speed x [m/s]'); ylabel('Speed z [m/s]');
