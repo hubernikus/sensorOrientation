@@ -1,8 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%                   Sensor Orientation -- EPFL 
-%                   LAB 4 
-%                       
+%                   Sensor Orientation -- EPFL
+%                   LAB 4
+%
 %                   Author: Lukas Huber
 %                   Date: 2017/10/27
 %
@@ -58,7 +58,7 @@ max_posErrs = zeros(length(x_sim),3);
 
 figure('Position',[0,0,800,1200]); % Plot results
 set(groot,'DefaultAxesFontSize',14)
-set(groot,'DefaultLineLineWidth',1.2)
+    set(groot,'DefaultLineLineWidth',1.2)
 
 err_pos = [];
 h1 = subplot(3,1,1);
@@ -76,16 +76,16 @@ for i = 1:length(x_sim)
         x_real = x_real_100hz;
         phi_real = phi_real_100hz*180/pi;
     end
-          
+
     err_pos{i} = x_sim{i}-x_real;
     hold(h1,'on')
-    plot(h1, phi_real, err_pos{i}(1,:)); 
+    plot(h1, phi_real, err_pos{i}(1,:));
     hold(h2,'on')
-    plot(h2, phi_real, err_pos{i}(2,:));  
+    plot(h2, phi_real, err_pos{i}(2,:));
     hold(h3,'on')
     absErr = sqrt(sum(err_pos{i}.^2,1));
-    plot(h3, phi_real, absErr); 
-    
+    plot(h3, phi_real, absErr);
+
     % Maximal errors
     max_posErrors(i,1) = max(abs(err_pos{i}(1,:)));
     max_posErrors(i,2) = max(abs(err_pos{i}(2,:)));
@@ -123,16 +123,16 @@ for i = 1:length(x_sim)
         v_real = v_real_100hz;
         phi_real = phi_real_100hz*180/pi;
     end
-          
+
     err_vel{i} = v_sim{i}(:,1:end-1)-v_real;
     hold(h1,'on')
-    plot(h1, phi_real(1:end-1), err_vel{i}(1,:)); 
+    plot(h1, phi_real(1:end-1), err_vel{i}(1,:));
     hold(h2,'on')
-    plot(h2, phi_real(1:end-1), err_vel{i}(2,:));  
+    plot(h2, phi_real(1:end-1), err_vel{i}(2,:));
     hold(h3,'on')
     absErr = sqrt(sum(err_vel{i}.^2,1));
-    plot(h3, phi_real(1:end-1), absErr); 
-    
+    plot(h3, phi_real(1:end-1), absErr);
+
     % Maximal errors
     max_velErrors(i,1) = max(abs(err_vel{i}(1,:)));
     max_velErrors(i,2) = max(abs(err_vel{i}(2,:)));
@@ -162,13 +162,13 @@ for i = 1:length(x_sim)
     else
         phi_real = phi_real_100hz*180/pi;
     end
-    
+
     err_phi{i} = phi_sim{i}*180/pi-phi_real;
-    absErr = abs(err_phi{i}); 
+    absErr = abs(err_phi{i});
     max_angErrors(i) = max(absErr);
-    
-    plot(phi_real, absErr); hold on; 
-    
+
+    plot(phi_real, absErr); hold on;
+
 end
 
 ylabel('Total azimuth error [deg]'); xlabel('Real Azimuth [deg]')

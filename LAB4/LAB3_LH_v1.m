@@ -33,20 +33,19 @@
 % * \sqrt(f_s} \quad \rightarrow \quad rad/s/sam
 % 
 %%
-
 close all; clear all; clc;
 
 addpath(genpath('../LAB1'))
 addpath(genpath('../LAB3'))
-%
+
 
 %% Rescaling sensor error
 g = 9.81; % [m/s^2] - Gravity
 
-sampilingFreq = 10;     % [Hz]
-%sampilingFreq = 100;    % [Hz]
+samplingFreq = 100;     % [Hz]
+%samplingFreq = 100;    % [Hz]
 
-b_g = 10,               % [deg/h]
+b_g = 10;               % [deg/h]
 simga_G_GM = 0.005;     % [deg/s/sqrt(Hz)]
 beta_G_inv = 100;       % [s]
 sigma_G_vel = 0.1;      % [deg/sqrt(h)]
@@ -60,9 +59,8 @@ beta_G_inv = beta_G_inv
 sigma_G_vel = sigma_G_vel/180*pi*sqrt(samplingFreq)
 b_A = b_A * g 
 sigma_A_vel = sigma_A_vel / 10e6 * g *sqrt(samplingFreq)
-%%
 
-sampleRate = 100; % [Hz]
+%% Ex 2 
 r_circ = 500; % [m]
 omega0 = pi/100; % Frequency rad/s
 
@@ -72,10 +70,31 @@ azim_init = pi/100; %
 
 % Simulate Measurement
 [acc, gyro, x_real, v_real, phi_real, time] = ... 
-           IMUsens_simulation(sampleRate, omega0, r_circ, phi0, azim_init);
+           IMUsens_simulation(samplingFreq, omega0, r_circ, phi0, azim_init);
 
 
-% Noise Functions
-% whiteNoiseGen()
-% randWalkGen()
-% gaussMarkovGen()
+% Number of samples
+N_samples = length(acc);
+
+% Gyro bias'
+bias = ones(2, N_samples) * b_g;
+gyro_bias = gyro + bias;
+
+% Gyro correlated noise
+gyro_corrNoise1 = gyro + gaussMarkovGen(N_samples, 2, simga_G_GM);
+gyro_corrNoise2 = gyro + gaussMarkovGen(N_samples, 2, beta_G_inv);
+
+% Gyro random walk
+gyro_randomWalk = gyro + whiteNoiseGen(N_samples, 2, sigma_G_vel);
+
+
+% Accelerometer bias
+bias = ones(N_samples,1) * b_g;
+acc_bias = gyro + bias;
+
+% Accelerometer noise
+acc_noise = gyro + gaussMarkovGen(N_samples, 1, b_A);
+
+
+
+%% Plot data
