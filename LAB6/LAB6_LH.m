@@ -11,22 +11,28 @@
 close all; clear variables; clc;
 
 addpath(genpath('../functions'))
-%addpath(genpath('../LAB1'))
-%addpath(genpath('../LAB3'))
 
 % Import Data
 [dataIXSEA, fIXSEA] = readimu('data/ixsea_2nd_group.imu','IXSEA');
 
-% Initial data
-g = 9.81; % [m/s^2] - Gravity
-
 % Start and stop time in TOF (Time of the week)
 timeLimit = [480610,480710];
 
+% Rotation Matrix of Sensor Reading
+R_NWU_NED = [1 0 0; 0 -1 0; 0 0 -1];
+
 % Initial Orientation
-heading  = 299.337; % [deg]
-roll = 2.524; % [deg]
-pitch = 1.710; % [deg]
+roll_ref = 2.524*pi/180; % [rad] 
+pitch_ref = 1.710*pi/180*(-1); % [rad]-- NWD -> NED frame
+heading_ref  = 299.337*pi/180; % [rad]
+
+% Rotation Matrix of Reference Inputs
+R_NWD_NED = [1 0 0; 0 -1 0; 0 0 1];
+
+% Lattitue EPFL
+% N 46°31'17''
+phi_ref = pi/180*(46 + 1/60*(31 + 1/60*17) );
+
 
 %%
 % After observing the data, measurements was limited between [10 - 80s]
@@ -39,12 +45,12 @@ indLimit = [find(dataIXSEA(:,1) > timeLimit(1) + t_smooth(1), 1), ...
 % Time set to zero at timeLimit(1) = 480610
 time = dataIXSEA(indLimit(1):indLimit(2),1)-(timeLimit(1)++ t_smooth(1)); 
 
-gyro = dataIXSEA(indLimit(1):indLimit(2),2:4);
-acc = dataIXSEA(indLimit(1):indLimit(2),5:7);
+gyro = R_NWU_NED*dataIXSEA(indLimit(1):indLimit(2),2:4)';
+acc = R_NWU_NED*dataIXSEA(indLimit(1):indLimit(2),5:7)';
 
 % Demean data 
-accMean = mean(acc);
-gyroMean = mean(gyro);
+accMean = mean(acc,2);
+gyroMean = mean(gyro,2);
 
 acc = acc - accMean;
 gyro = gyro - gyroMean;
@@ -73,17 +79,17 @@ if(0) % 1 to run and save again
     set(groot,'DefaultLineLineWidth',1.2)
     
     h1 = subplot(2,1,1);
-    plot(h1, time,acc(:,1)-mean(acc(:,1))); hold on;
-    plot(h1, time,acc(:,2)-mean(acc(:,2))); hold on;
-    plot(h1, time,acc(:,3)-mean(acc(:,3))); hold on;
+    plot(h1, time,acc(1,:)-mean(acc(1,:))); hold on;
+    plot(h1, time,acc(2,:)-mean(acc(2,:))); hold on;
+    plot(h1, time,acc(3,:)-mean(acc(3,:))); hold on;
     xlim([time(1), time(end)]);
     xlabel('Time [s]'), ylabel('Accelerometer measurement [m/s^2]')
     legend('x direction','y direction','z direction')
     
     h2 = subplot(2,1,2);
-    plot(h2, time,gyro(:,1)-mean(gyro(:,1))); hold on;
-    plot(h2, time,gyro(:,2)-mean(gyro(:,2))); hold on;
-    plot(h2, time,gyro(:,3)-mean(gyro(:,3))); hold on;
+    plot(h2, time,gyro(1,:)-mean(gyro(1,:))); hold on;
+    plot(h2, time,gyro(2,:)-mean(gyro(2,:))); hold on;
+    plot(h2, time,gyro(3,:)-mean(gyro(3,:))); hold on;
     xlim([time(1), time(end)]);
     xlabel('Time [s]'), ylabel('Gyroscope measurement [rad/s]')
     
@@ -91,58 +97,81 @@ if(0) % 1 to run and save again
 end
 
 %% Calculate norm of the signals
-accNorm = norm(accMean)
-gyroNorm = norm(gyroMean)
+% Take mean before norm, for average signal
+
+accNorm = norm(accMean);
+gyroNorm = norm(gyroMean);
 
 gravityTheoretical = -(980000 + 550)* 1e-5; %[m/s^2] 
 angularRotation = 7.2921150 * 1e-5; %[rad/s] 
 
-varAcc = (accNorm - abs(gravityTheoretical))/abs(gravityTheoretical)
-varGyr = (gyroNorm -angularRotation )/angularRotation
+% Percental differenc
+varAcc = (accNorm - abs(gravityTheoretical))/abs(gravityTheoretical);
+varGyr = (gyroNorm -angularRotation )/angularRotation;
+
+fprintf('\n')
+fprintf('Accelerometer Measuerement: %0.7e deg, Relavitve error: %0.4e \n',accNorm, varAcc)
+fprintf('Accelerometer Bias: %0.7e m/s^2 \n', abs(accNorm-abs(gravityTheoretical)))
+fprintf('Gyroscope Masurement: %0.7e deg, Relavitve error: %0.4e \n',gyroNorm, varGyr)
+fprintf('Gyroscope Bias: %0.7e rad/s \n', abs(gyroNorm-angularRotation) )
+fprintf('\n')
+
+%% IV - Leveling Accelerometer to NED
+% Important
+
+% Pitch 
+roll = asin(accMean(2)/-accNorm);
+
+R_p = [1 0 0;
+        0 cos(roll) sin(roll);
+        0 -sin(roll) cos(roll)];
+
+% Roll
+pitch = asin(accMean(1)/accNorm);
+
+R_r = [cos(pitch) 0 -sin(pitch);
+        0 1 0;
+       sin(pitch) 0 cos(pitch)];
+
+% Compare relative Error
+roll_relError = (roll-roll_ref)/roll_ref;
+pitch_relError = (pitch-pitch_ref)/pitch_ref;
+
+   
+% R = R_r * R_p * R_y
+accLeveled = (R_r * R_p)'*accMean;
 
 
+fprintf('Roll: %3.4f deg, Reference: %3.4f, Relavitve error: %0.4e \n', ...
+                        roll*180/pi, roll_ref*180/pi, roll_relError)
+fprintf('Pitch: %3.4f deg, Reference: %3.4f, Relavitve error: %0.4e \n',...
+                    pitch*180/pi, pitch_ref*180/pi, pitch_relError)
+fprintf('\n')
 
 
-%% Important
-
-% Take mean before norm, for average signal
-
-%% Important
+%% IV - Gyrocompassing to Esimtate YAW
+gyroLeveled = (R_r * R_p)'*gyroMean;
 
 
+Az = atan2(-gyroLeveled(2),gyroLeveled(1))+2*pi;
+R_y = [cos(Az) sin(Az) 0;
+       -sin(Az) cos(Az) 0;
+        0 0 1];
 
+az_relError = (Az-heading_ref)/heading_ref;
 
-%% Ex 2 
-% Initial conditions
-omega0 = pi/100;     % [rad/s]
-r_circ = 500;       % [m]
-azim_init = 90/180*pi; % [rad]
-phi0 = 90/180*pi;
-x0 = [0;0;0];
-vel0 = [-omega0*r_circ;0]; % initial velocity
-initHeading = [phi0+azim_init];
+fprintf('Azimuth: %3.4f deg, Reference: %3.4f, Relavitve error: %0.7e \n', ...
+                        Az*180/pi, heading_ref*180/pi, az_relError)
+fprintf('\n')
 
-            
-% Add different noise on measurement
-% Number of samples
-%N_samples = length(acc);
+gyroCompassed = R_y' * gyroLeveled;
 
+%% 10. Determine Lattitude Value
+phi_1 = acos(gyroCompassed(1)/angularRotation);
+phi_2 = asin(-gyroCompassed(3)/angularRotation);
 
+fprintf('Ref: %2.7f, Lattitude 1: %2.7f, Lattitude 2: %2.7f \n' , ...
+    phi_ref*180/pi, phi_1*180/pi, phi_2*180/pi)
 
-%%
-close all;
-i = 1; 
-[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc, gyro, time, intOrder);
-
-titleName = 'test';
-[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim{i}, x_real, v_sim{i}, v_real, phi_sim{i}, phi_real, titleName)
-
-
-
-%% Print table to LATEX
-
-% fileID = fopen('table_errors.tex','w');
-% fprintf(fileID,'Position Errors [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline \n',posErr);
-% fprintf(fileID,'Velocity Errors [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline \n',velErr);
-% fprintf(fileID,'Azimuth Error [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline ',angErr);
-% fclose(fileID);
+fprintf('Difference -  Lattitude 1: %0.7e, Lattitude 2: %0.7e \n' , ...
+     (phi_1-phi_ref), (phi_2-phi_ref))
