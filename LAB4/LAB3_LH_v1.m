@@ -42,7 +42,7 @@ addpath(genpath('../LAB3'))
 %% Rescaling sensor error
 g = 9.81; % [m/s^2] - Gravity
 
-samplingFreq = 100;     % [Hz]
+samplingFreq = 10;     % [Hz]
 %samplingFreq = 100;    % [Hz]
 
 b_g = 10;               % [deg/h]
@@ -54,7 +54,7 @@ sigma_A_vel = 50;       % [mu g/ /sqrt(Hz)]
 
 % Rescale to SI units
 b_g = b_g/180*pi/3600 
-simga_G_GM = simga_G_GM/180*pi
+simga_G_GM = simga_G_GM/180*pi*sqrt(samplingFreq)
 beta_G_inv = beta_G_inv
 sigma_G_vel = sigma_G_vel/180*pi*sqrt(samplingFreq)
 b_A = b_A * g 
