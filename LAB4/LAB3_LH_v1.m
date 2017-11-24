@@ -1,49 +1,27 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%           Sensor Orientation - EPFL 
+%           Sensor Orientation - LAB 5 
+%           EPFL
 %
 %           Author: Huber Lukas
 %           Date: 2017-11-03
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-% Blackbaord - Comments
-%
-% WN_ \sigma_{\omega_{WN}} ., \simga_{a_{WN}}
-% RC \rightarrow chosen arbitrary \pm 3 \sigma_{RC}
-% GM1:  \sigma_{GM}, \beta = \frac 1 T
-% b_{k+1} = \Sigma b_k ' + w_{k+1} \quad \text{with} \quad 0 < \Sigma < 1
-%
-% \sigma_{GM}^2 = \SIGMA ^2 \sigma_{GM}^2 + q
-% (1-e^{-12\beta \Delta t}) \sigma_{GM}^2 = q
-% \sqrt{q} = \simga_{WN}
-% 
-%
-% Gyro:
-% s^{obs} = s^{how} + b_{RC} + b_{GM} + n_{WN}
-%
-% Accelerometer
-% f^b = f^b_{non} + 
-% \begin{bmatrix} f_1 RC \\ f_2 RC \end{bmatrix} +
-% \begin{bmatrix} randn\\ randn \end{bmatrix} \cdot \sigma_a^2 
-%
-%
-% deg/rn  \qquad 0.05 \deg/\sqrt(n) \quad \rightarrow \quad rad/s/sample
-% \frac \pi{180} \cdot \frac 1 \sqrt{3600} \quad \rightarrow \quad rad/ \sqrt(s) = rad/s/ \sqrt{Hz}
-% * \sqrt(f_s} \quad \rightarrow \quad rad/s/sam
-% 
 %%
 close all; clear all; clc;
 
 addpath(genpath('../LAB1'))
 addpath(genpath('../LAB3'))
 
-
-%% Rescaling sensor error
+%% Rescaling sensor errorc
+clc;
 g = 9.81; % [m/s^2] - Gravity
 
 samplingFreq = 10;     % [Hz]
+<<<<<<< HEAD
 %samplingFreq = 100;    % [Hz]
+=======
+>>>>>>> 654334958b97321bbb0420ea5429a16f2dd048db
 
 b_g = 10;               % [deg/h]
 simga_G_GM = 0.005;     % [deg/s/sqrt(Hz)]
@@ -56,45 +34,114 @@ sigma_A_vel = 50;       % [mu g/ /sqrt(Hz)]
 b_g = b_g/180*pi/3600 
 simga_G_GM = simga_G_GM/180*pi*sqrt(samplingFreq)
 beta_G_inv = beta_G_inv
-sigma_G_vel = sigma_G_vel/180*pi*sqrt(samplingFreq)
-b_A = b_A * g 
-sigma_A_vel = sigma_A_vel / 10e6 * g *sqrt(samplingFreq)
+sigma_G_vel = sigma_G_vel/180*pi*1/sqrt(3600)*sqrt(samplingFreq)
+b_A = b_A * g * 1e-3
+sigma_A_vel = sigma_A_vel * 1e-6 * g * sqrt(samplingFreq)
 
 %% Ex 2 
-r_circ = 500; % [m]
-omega0 = pi/100; % Frequency rad/s
-
-phi0 = pi/100; % 
-azim_init = pi/100; % 
-
+% Initial conditions
+omega0 = pi/100;     % [rad/s]
+r_circ = 500;       % [m]
+azim_init = 90/180*pi; % [rad]
+phi0 = 90/180*pi;
+x0 = [0;r_circ];
+vel0 = [-omega0*r_circ;0]; % initial velocity
+initHeading = [phi0+azim_init];
 
 % Simulate Measurement
 [acc, gyro, x_real, v_real, phi_real, time] = ... 
            IMUsens_simulation(samplingFreq, omega0, r_circ, phi0, azim_init);
-
-
+             
+% Add different noise on measurement
 % Number of samples
 N_samples = length(acc);
 
-% Gyro bias'
-bias = ones(2, N_samples) * b_g;
-gyro_bias = gyro + bias;
+% Gyro bias
+gyro_bias = ones(1, N_samples) * b_g;
 
 % Gyro correlated noise
-gyro_corrNoise1 = gyro + gaussMarkovGen(N_samples, 2, simga_G_GM);
-gyro_corrNoise2 = gyro + gaussMarkovGen(N_samples, 2, beta_G_inv);
+deltaT = 1/samplingFreq;
+gyro_corrNoise =  gaussMarkovGen(N_samples, 1, deltaT, beta_G_inv, simga_G_GM);
 
 % Gyro random walk
-gyro_randomWalk = gyro + whiteNoiseGen(N_samples, 2, sigma_G_vel);
+gyro_randomWalk = whiteNoiseGen(N_samples, 1, sigma_G_vel);
 
+gyro_errors = gyro + gyro_bias + gyro_corrNoise + gyro_randomWalk;
 
 % Accelerometer bias
-bias = ones(N_samples,1) * b_g;
-acc_bias = gyro + bias;
+acc_bias = ones(2, N_samples) * b_A;
 
 % Accelerometer noise
-acc_noise = gyro + gaussMarkovGen(N_samples, 1, b_A);
+acc_noise = whiteNoiseGen(N_samples, 2, sigma_A_vel);
+
+acc_errors = acc + acc_bias + acc_noise; 
+
+%%
+close all;
+
+i = 1;
+intOrder = 2;
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc, gyro_errors, time,intOrder);
+
+i = 2; 
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_errors, gyro, time,intOrder);
+
+i = 3
+[x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc, gyro, time,intOrder);
 
 
+% Calculate Error - Postition
+posErr = []; velErr = []; angErr=[];
 
-%% Plot data
+i = 3;
+titleName = 'no_errors';
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim{i}, x_real, v_sim{i}, v_real, phi_sim{i}, phi_real, titleName)
+
+i = 1;
+titleName = 'Gyro_Errors';
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim{i}, x_real, v_sim{i}, v_real, phi_sim{i}, phi_real, titleName)
+
+i = 2;
+titleName = 'acc_Errors';
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim{i}, x_real, v_sim{i}, v_real, phi_sim{i}, phi_real, titleName)
+
+
+%%
+fprintf('gyro_bias: \n')
+i = 4;
+gyro_partError = gyro + gyro_bias;
+[x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc, gyro_partError, time,intOrder);
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
+
+fprintf('gyro_corrNoise: \n')
+i = 5;
+gyro_partError = gyro + gyro_corrNoise;
+[x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc, gyro_partError, time,intOrder);
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
+
+fprintf('gyro_randomWalk: \n')
+i = 6;
+gyro_partError = gyro + gyro_randomWalk;
+[x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc, gyro_partError, time,intOrder);
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
+
+fprintf('acc_bias: \n')
+i = 7;
+acc_partError = acc + acc_bias; 
+[x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc_partError, gyro, time,intOrder);
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
+
+fprintf('acc_noise: \n')
+i = 8;
+acc_partError = acc + acc_noise; 
+[x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc_partError, gyro, time,intOrder);
+[posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
+
+
+%% Print table to LATEX
+
+fileID = fopen('table_errors.tex','w');
+fprintf(fileID,'Position Errors [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline \n',posErr);
+fprintf(fileID,'Velocity Errors [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline \n',velErr);
+fprintf(fileID,'Azimuth Error [m]& %3.2f & %3.2f & %3.2f & %3.2f & %3.2f & %3.2f  & %3.2f  & %3.2f  \\\\ \\hline ',angErr);
+fclose(fileID);
