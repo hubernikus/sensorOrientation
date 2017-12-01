@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %           Sensor Orientation - EPFL
@@ -194,3 +195,6 @@ fileID = fopen('table_STD.tex','w');
 fprintf(fileID,'Real GPS Positioning [m]& %3.4f & %3.4f & %3.4f & %3.4f & %3.4f & %3.4f  \\\\ \\hline \n',sigma_gps, mean(sigma_gps) );
 fprintf(fileID,'Filtered Positioning [m]& %3.4f & %3.4f & %3.4f & %3.4f & %3.4f & %3.4f  \\\\ \\hline \n',sigma_filt, mean(sigma_filt) );
 fclose(fileID);
+=======
+
+>>>>>>> b237cfedd1f4571bea8b3d3387ce4a7f2f4d4ce5
