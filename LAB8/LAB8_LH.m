@@ -45,58 +45,100 @@ simga_x_GPS = 0.5; simga_y_GPS = 0.5; % [m]
 x_simu = x_real + [whiteNoiseGen(size(x_real,2),1,simga_x_GPS); whiteNoiseGen(size(x_real,2),1,simga_y_GPS)];
 
 %%
+constVel = false;
+
 for iter = 1:2
     dt_kf = dt_kf_list(iter);
     
-    % Kalman Filtering
-    dim = 6;
+    if constVel
+        dim = 4;
 
-    % A priori Info Conditions
-    sigma_p = 10;       % [m]
-    sigma_v = 0.10;     % [m]
-    sigma_a = 0.10;     % [m]
+        % A priori Info Conditions
+        sigma_x = 10;% [m]
+        sigma_v = 0.10;% [m]
 
-    F = [0 0 1 0 0 0; 
-         0 0 0 1 0 0;
-         0 0 0 0 1 0;
-         0 0 0 0 0 1;
-         0 0 0 0 0 0;
-         0 0 0 0 0 0];
+        F = [0 0 1 0; 
+             0 0 0 1;
+             0 0 0 0;
+             0 0 0 0];
 
-    G = [0 0;
-         0 0;
-         0 0;
-         0 0;
-         1 0;
-         0 1];
+        G = [0 0;
+             0 0;
+             1 0;
+             0 1];
 
-    Phi0 = eye(6) ...
-        + [zeros(4,2), eye(4)*dt_kf; zeros(2,6)] ...
-        + [zeros(2,4), eye(2)*dt_kf^2/2; zeros(4,6)];
-    
-    % Uncertainty of motion model
-    sigma_at = 0.01; 
-    a_dot = 0; % uniform constant acceleration
-    qvn = sigma_at^2; qve = sigma_at^2;
-    W = diag([qvn, qve]);
-    
-    % R [l x l] - Covariance matrix of measurment
-    R = diag([simga_x_GPS^2, simga_y_GPS^2]);
-    
-    % x [n x 1]- State vector
-    % x = [x, y, v_x, v_y, a_x, a_y];
-    x_filt = [0; r_circ; -omega0*r_circ; 0; 0; -omega0^2*r_circ];
-    
-    % z [l x 1] - Measurements 
+        Phi = eye(dim) + dt_kf*F;
+
+        sigma_vt = 0.035; % Uncertainty in Model
+        a = 0; % uniform constant motion
+        sigma_at = 0;
+        qvn = sigma_vt^2; qve = sigma_vt^2;
+        W = diag([qvn, qve]);
+
+
+        R = diag([simga_x_GPS^2, simga_y_GPS^2]);
+
+
+        % State 
+        %x = [r_circ; 0; x_simu(1,1);x_simu(2,1)];
+        % x = [x, y, v_x, v_y];
+        x_filt = [0; r_circ; -omega0*r_circ; 0];
         
-    % H [l x n]- Design Matrix ( z = H*x + v )
-    H = [1 0 0 0 0 0;
-         0 1 0 0 0 0];
-    
-    % P [n x n]- Covariance Matrix of the state vector
-    P0 = diag([sigma_p^2, sigma_p^2, sigma_v^2, sigma_v^2, sigma_a^2, sigma_a^2]);
+        P0 = diag([sigma_x^2, sigma_x^2, sigma_v^2, sigma_v^2]);
+
+        H = [1 0 0 0;
+             0 1 0 0];
+    else
+        % Kalman Filtering
+        dim = 6;
+
+        % A priori Info Conditions
+        sigma_p = 10;       % [m]
+        sigma_v = 0.10;     % [m]
+        sigma_a = 0.10;     % [m]
+
+        F = [0 0 1 0 0 0; 
+             0 0 0 1 0 0;
+             0 0 0 0 1 0;
+             0 0 0 0 0 1;
+             0 0 0 0 0 0;
+             0 0 0 0 0 0];
+
+        G = [0 0;
+             0 0;
+             0 0;
+             0 0;
+             1 0;
+             0 1];
+
+        Phi0 = eye(6) ...
+            + [zeros(4,2), eye(4)*dt_kf; zeros(2,6)] ...
+            + [zeros(2,4), eye(2)*dt_kf^2/2; zeros(4,6)];
+
+        % Uncertainty of motion model
+        sigma_at = 0.001; 
+        a_dot = 0; % uniform constant acceleration
+        qvn = sigma_at^2; qve = sigma_at^2;
+        W = diag([qvn, qve]);
+
+        % R [l x l] - Covariance matrix of measurment
+        R = diag([simga_x_GPS^2, simga_y_GPS^2]);
+
+        % x [n x 1]- State vector
+        % x = [x, y, v_x, v_y, a_x, a_y];
+        x_filt = [0; r_circ; -omega0*r_circ; 0; 0; -omega0^2*r_circ];
+
+        % z [l x 1] - Measurements 
+
+        % H [l x n]- Design Matrix ( z = H*x + v )
+        H = [1 0 0 0 0 0;
+             0 1 0 0 0 0];
+
+        % P [n x n]- Covariance Matrix of the state vector
+        P0 = diag([sigma_p^2, sigma_p^2, sigma_v^2, sigma_v^2, sigma_a^2, sigma_a^2]);
+    end
     P = P0;
-    
+
     % Initialization
     % Auxiliary matrix A
     A = [-F, G*W*G'; ...
@@ -111,9 +153,9 @@ for iter = 1:2
     x_tild(:,1) = Phi*x_filt(:,1);
     x_tilde = Phi*x_filt(:,1);
     P_tilde = Phi*P*Phi' + Q_k;
-    dt_kf = 0.1
-    
+
     N_sim = size(x_simu,2);
+    
     %N_sim = 30
     for ii = 1:N_sim
         % Mesurement --- z, R ----
@@ -204,18 +246,23 @@ end
 % Rotational plot
 figure('Position',[100,200,800,700]);
 set(groot,'DefaultAxesFontSize',14)
-set(groot,'DefaultLineLineWidth',1.2)
+set(groot,'DefaultLineLineWidth',1.0)
 plot(x_real(1,1:N_sim),x_real(2,1:N_sim),'b-x'); hold on;
 plot(x_simu(1,1:N_sim),x_simu(2,1:N_sim),'ro')
 %plot(x_simu(1,1:4),x_simu(2,1:4),'bo')
-plot(x_filt(1,:),x_filt(2,:),'g-x')
+iter = 1;
+plot(x_KF(1,:, iter),x_KF(2,:, iter),'g-x')
+iter = 2;
+plot(x_KF(1,:, iter),x_KF(2,:, iter),'m-x')
 ylabel('North [m]'); xlabel('East [m]')
-legend('Real measurement', 'Measurement','Kalman Filter')
-print('fig/kalmanFilter','-depsc')
+legend('Real measurement', 'Measurement','Kalman Filter 1 Hz', 'Kalman Filter 0.1 Hz')
+
+print(sprintf('fig/kalmanFilter_sigma%1.4f.eps',sigma_at),'-depsc')
+
 
 %% I. Improvement in the  Positioning accuracy & Anticipate
 
-sabilisationTime = sabilisationTime
+%sabilisationTime = sabilisationTime
 sigma_pred_fin = sigma_pred(:,end)
 
 % Print Latex Table
@@ -269,7 +316,11 @@ plot(time,x_KF(4,1:end-2,1)-v_real(2,:),'r'); hold on;
 plot(time,x_KF(4,1:end-2,2)-v_real(2,:),'g'); hold on;
 ylabel('Velocity North [m/s]')
 xlabel('Time [s]')
-print('fig/distribution_velocityError','-depsc')
+if constVel
+    print('fig/distribution_velocityError_constVel','-depsc')
+else
+    print('fig/distribution_velocityError','-depsc')
+end
 %% IV. Histogramm innovation  - 
 time = [0:size(v_real,2)-1]*dt_gps;
 
@@ -311,9 +362,15 @@ f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist
 plot(xVals, f_norm, 'k--')
 xlabel('Innovation North [m/s]')
 
-print('fig/histogramm_innovation_all','-depsc')
+if sigma_at == 0.001
+    print('fig/histogramm_innovation_all_sigma_at0001','-depsc')
+elseif sigma_at == 0.1
+    print('fig/histogramm_innovation_all_sigma_at01','-depsc')
+else
+    print('fig/histogramm_innovation_all','-depsc')
+end
 
-%% IV. Histogramm innovation 
+%% IV. Histogramm Innovation 
 stabTime = 30;
 figure('Position',[100,200,800,700]);
 set(groot,'DefaultAxesFontSize',14)
@@ -353,57 +410,82 @@ f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist
 plot(xVals, f_norm, 'k--')
 xlabel('Innovation North [m/s]')
 
-print('fig/histogramm_innovation_cut','-depsc')
+if sigma_at == 0.001
+    print('fig/histogramm_innovation_cut_sigma_at0001','-depsc')
+elseif sigma_at == 0.1
+    print('fig/histogramm_innovation_cut_sigma_at01','-depsc')
+else
+    print('fig/histogramm_innovation_cut','-depsc')
+end
+
 
 %% V. Changes position 
+if not(constVel)
+    time = [0:size(x_filt,2)-1]*dt_gps;
+    figure('Position',[100,200,900,900]);
+    set(groot,'DefaultAxesFontSize',14)
+    set(groot,'DefaultLineLineWidth',1.2)
+    subplot(3,1,1)
+    iter = 1;
+    plot(time,x_KF(1,:,iter),'r'); hold on;
+    plot(time,x_KF(2,:,iter),'r--'); hold on;
+    iter = 2;
+    plot(time,x_KF(1,:,iter),'g'); hold on;
+    plot(time,x_KF(2,:,iter),'g--'); hold on;
+    ylabel('Position [m]')
+
+    subplot(3,1,2)
+    iter = 1;
+    plot(time,x_KF(3,:,iter),'r'); hold on;
+    plot(time,x_KF(4,:,iter),'r--'); hold on;
+    iter = 2;
+    plot(time,x_KF(3,:,iter),'g'); hold on;
+    plot(time,x_KF(4,:,iter),'g--'); hold on;
+    ylabel('Velocity [m/s]')
+    legend('Up. freq. 1 Hz (East)','Up. freq. 1 Hz (North)', ...
+        'Up. freq. 0.1 Hz (East)','Up. freq. 0.1 Hz (North)')
+
+    subplot(3,1,3)
+    iter = 1;
+    plot(time,x_KF(5,:,iter),'r'); hold on;
+    plot(time,x_KF(6,:,iter),'r--'); hold on;
+    iter = 2;
+    plot(time,x_KF(5,:,iter),'g'); hold on;
+    plot(time,x_KF(6,:,iter),'g--'); hold on;
+    ylabel('Acceleration [m/s^2]')
+    xlabel('Time [s]')
+    if sigma_at == 0.001
+        print('fig/kalmanFilter_subplots_vel_acc_sigma_at0001','-depsc')
+    elseif sigma_at == 0.1
+        print('fig/kalmanFilter_subplots_vel_acc_sigma_at01','-depsc')
+    else
+        print('kalmanFilter_subplots_vel_acc_','-depsc')
+    end
+    
+    time = [0:size(x_tild,2)-1]*dt_kf;
+    figure('Position',[100,200,800,700]);
+    set(groot,'DefaultAxesFontSize',14)
+    set(groot,'DefaultLineLineWidth',1.2)
+    subplot(3,1,1)
+    plot(time,x_tild(1,:),'r'); hold on;
+    plot(time,x_tild(2,:),'g'); hold on;
+    ylabel('Position [m]')
+
+    subplot(3,1,2)
+    plot(time,x_tild(3,:),'r'); hold on;
+    plot(time,x_tild(4,:),'g'); hold on;
+    ylabel('Velocity [m/s]')
+    legend('East','North')
+
+    subplot(3,1,3)
+    plot(time,x_tild(5,:),'r'); hold on;
+    plot(time,x_tild(6,:),'g'); hold on;
+    ylabel('Acceleration [m/s^2]')
+    xlabel('Time [s]')
+    print('fig/kalmanFilter_tilde_subplots','-depsc')
+end
 
 %% VI. Decrease increase velocity
-%%
-time = [0:size(x_filt,2)-1]*dt_gps;
-figure('Position',[100,200,800,700]);
-set(groot,'DefaultAxesFontSize',14)
-set(groot,'DefaultLineLineWidth',1.2)
-subplot(3,1,1)
-plot(time,x_filt(1,:),'r'); hold on;
-plot(time,x_filt(2,:),'g'); hold on;
-ylabel('Position [m]')
-
-subplot(3,1,2)
-plot(time,x_filt(3,:),'r'); hold on;
-plot(time,x_filt(4,:),'g'); hold on;
-ylabel('Velocity [m/s]')
-legend('East','North')
-
-subplot(3,1,3)
-plot(time,x_filt(5,:),'r'); hold on;
-plot(time,x_filt(6,:),'g'); hold on;
-ylabel('Acceleration [m/s^2]')
-xlabel('Time [s]')
-print('fig/kalmanFilter_subplots','-depsc')
-
-
-time = [0:size(x_tild,2)-1]*dt_kf;
-figure('Position',[100,200,800,700]);
-set(groot,'DefaultAxesFontSize',14)
-set(groot,'DefaultLineLineWidth',1.2)
-subplot(3,1,1)
-plot(time,x_tild(1,:),'r'); hold on;
-plot(time,x_tild(2,:),'g'); hold on;
-ylabel('Position [m]')
-
-subplot(3,1,2)
-plot(time,x_tild(3,:),'r'); hold on;
-plot(time,x_tild(4,:),'g'); hold on;
-ylabel('Velocity [m/s]')
-legend('East','North')
-
-subplot(3,1,3)
-plot(time,x_tild(5,:),'r'); hold on;
-plot(time,x_tild(6,:),'g'); hold on;
-ylabel('Acceleration [m/s^2]')
-xlabel('Time [s]')
-print('fig/kalmanFilter_tilde_subplots','-depsc')
-
 
 
 
