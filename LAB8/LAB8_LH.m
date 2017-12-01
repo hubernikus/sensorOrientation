@@ -282,7 +282,12 @@ for iter = 1:size(sigma_pred,1)
 end
 xlabel('Time [s]')
 legend('Prediction interval: 1 Hz','Prediction interval: 0.1 Hz')
-print('fig/KFpredict','-depsc')
+
+if constVel
+    print('fig/KFpredict_constVel','-depsc')
+else
+    print('fig/KFpredict','-depsc')
+end
 
 
 %% III. Velocity distribution error
