@@ -122,14 +122,14 @@ fprintf('\n')
 % Pitch 
 roll = asin(accMean(2)/-accNorm);
 
-R_p = [1 0 0;
+R_r = [1 0 0;
         0 cos(roll) sin(roll);
         0 -sin(roll) cos(roll)];
 
 % Roll
 pitch = asin(accMean(1)/accNorm);
 
-R_r = [cos(pitch) 0 -sin(pitch);
+R_p = [cos(pitch) 0 -sin(pitch);
         0 1 0;
        sin(pitch) 0 cos(pitch)];
 
