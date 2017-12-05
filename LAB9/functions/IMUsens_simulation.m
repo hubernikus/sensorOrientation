@@ -8,8 +8,8 @@ if nargin<6
 end
 time = 0:1/sampleRate:t_final;
 
-% Simulation of x and v
-x_real = r_circ*[cos(time*omega0+phi0); sin(time*omega0+phi0)];
+% Simulation of x and v -- x_n, x_e
+x_real = r_circ*[cos(time*omega0); sin(time*omega0)];
 v_real = [x_real(:,2:end)-x_real(:,1:end-1)]*sampleRate;
 
 N = length(time); % number of generated data samples
