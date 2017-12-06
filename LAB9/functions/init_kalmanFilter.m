@@ -115,7 +115,7 @@ switch modelType
 
         model.Phi0 = [1 0 0;
                       0 1 dt_kf;
-                      0 0 0];
+                      0 0 1];
 
         
         % Uncertainty of motion model
@@ -134,7 +134,7 @@ switch modelType
 
         % x [n x 1]- State vector
         % x = [r, psi, \dot psi];
-        x_filt = [r_circ, omega0, 0]';
+        x_filt = [r_circ, 0, omega0]';
 
         % z [l x 1] - Measurements 
 
