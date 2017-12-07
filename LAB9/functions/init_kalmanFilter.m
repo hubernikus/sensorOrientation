@@ -1,5 +1,5 @@
 function [model, x_filt] ...
-            = init_kalmanFilter(modelType, dt_kf, r_circ, omega0, sigma_GPS)
+            = init_kalmanFilter(modelType, dt_kf, r_circ, omega0, sigma_GPS, fac_processingNoise)
         
 model.type = modelType;
 
@@ -121,7 +121,11 @@ switch modelType
         % Uncertainty of motion model
         model.sigma_rt = 0.001; 
         model.sigma_wt = omega0/20; 
-        
+        if nargin>5
+            fprintf('changing processing Noise \n')
+            model.sigma_rt = model.sigma_rt*fac_processingNoise;
+            model.sigma_wt = model.sigma_wt*fac_processingNoise;
+        end
         qvn = model.sigma_rt^2; qve = model.sigma_wt^2;
         model.W = diag([qvn, qve]);
         %model.W = model.M^T * model.W  * model.M;

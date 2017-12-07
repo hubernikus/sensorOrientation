@@ -8,7 +8,7 @@ dim = model.dim;
 R = model.R;
 W = model.W;
 H = model.H;
-Phi = model.Phi0;
+%Phi = model.Phi0;
 
 M = eye(2);
     
@@ -43,13 +43,17 @@ for ii = 1:N_sim
     K = P_tilde*H'/(H*P_tilde*H' + R);
 
     % State update
-    innovation(:,ii) = (zCalc(x_simu(:,ii))- H*x_tild(:,1+((ii-1)*dt_gps/dt_kf) ));
-    
-    while(innovation(2,ii)>pi) % modulo 2*pi
-        innovation(2,ii) = innovation(2,ii) - 2*pi;
-    end
-    while(innovation(2,ii)<-pi)
-        innovation(2,ii) = innovation(2,ii) + 2*pi;
+    if strcmp(model.type,'circularMotion')
+        innovation(:,ii) = (zCalc(x_simu(:,ii))- H*x_tild(:,1+((ii-1)*dt_gps/dt_kf) ));
+
+        while(innovation(2,ii)>pi) % modulo 2*pi
+            innovation(2,ii) = innovation(2,ii) - 2*pi;
+        end
+        while(innovation(2,ii)<-pi)
+            innovation(2,ii) = innovation(2,ii) + 2*pi;
+        end
+    else
+        innovation(:,ii) = (x_simu(:,ii)- H*x_tild(:,1+((ii-1)*dt_gps/dt_kf) ));
     end
         
     %innovation(2,ii) = innovation(2,ii) - 2*pi*(innovation(2,ii)>pi)+ 2*pi*(innovation(2,ii)<pi); 
