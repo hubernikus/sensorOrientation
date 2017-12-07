@@ -33,6 +33,8 @@ Q_k = Phi*B(1:dim,dim+1:2*dim);
 x_tild(:,1) = Phi*x_filt(:,1);
 P_tilde = Phi*P*Phi' + Q_k;
 
+sigma_pred(1) = sqrt(sum(diag(P)));
+
 N_sim = size(x_simu,2);
 
 N_innLoop = dt_gps/dt_kf;
@@ -52,6 +54,8 @@ for ii = 1:N_sim
         while(innovation(2,ii)<-pi)
             innovation(2,ii) = innovation(2,ii) + 2*pi;
         end
+        innovation_cart(:,ii) = convPolCart_x(innovation(:,ii));
+
     else
         innovation(:,ii) = (x_simu(:,ii)- H*x_tild(:,1+((ii-1)*dt_gps/dt_kf) ));
     end
@@ -71,7 +75,7 @@ for ii = 1:N_sim
     P = (eye(dim)- K*H)*P_tilde;
 
     % KF-predicted
-    sigma_pred(ii) = sqrt(sum(diag(P)));
+    sigma_pred(ii+1) = sqrt(sum(diag(P)));
 
     % Prediction - Inner Loop
     % Output ---- x_est, P ---
@@ -111,6 +115,7 @@ x_filt_rad = x_filt;
 
 if strcmp(model.type,'circularMotion') % transform radiational - cartesian
     x_filt = x_filt_cart; % return x_filt in cartesian coordinates
+    innovation = innovation_cart;
 end
 
 end
@@ -139,6 +144,11 @@ x_cart = [x_pol(1)*cos(x_pol(2)); % p_n
           -x_pol(1)*x_pol(3)*sin(x_pol(2));  % v_n
           -x_pol(1)*x_pol(3)*cos(x_pol(2))]; % v_e
       
+end
+
+function x_cart = convPolCart_x(x_pol)
+x_cart = [x_pol(1)*cos(x_pol(2)); % p_n
+          x_pol(1)*sin(x_pol(2))]; % p_e
 end
 
 function x_pol = convCartPol(x_cart)

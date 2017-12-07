@@ -5,13 +5,11 @@
 %           Author: Huber Lukas
 %           Date: 2017-11-25
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%
-close all; clear variables; clc;
-
 addpath(genpath('functions'))
 
+clear all; clc
+
 %% Rescaling sensor error
-clc;
 g = 9.81; % [m/s^2] - Gravity
 
 %% Simulation Parameters
@@ -33,35 +31,35 @@ initHeading = [phi0+azim_init];
 
 
 %% Kalman Filtering
-
-% % Personalize figure name
-fac_processingNoise = 1; % 0.1, 1, 10
-modelType = 'circularMotion';
-figName = modelType;
-
-% % Personalize figure name
-% fac_processingNoise = 1; % 0.1, 1, 10
-% modelType = 'constAcc';
-% figName = modelType;
-% % 
-% % Personalize figure name
-% fac_processingNoise = 1; % 0.1, 1, 10
-% modelType = 'constVel';
-% figName = modelType;
-% 
-% 
-% % Personalize figure name
-% fac_processingNoise = 10; % 0.1, 1, 10
-% modelType = 'circularMotion';
-% figName = '_procNoise10';
-% % % 
-% % % Personalize figure name
-% fac_processingNoise = 0.1; % 0.1, 1, 10
-% modelType = 'circularMotion';
-% figName = '_procNoise01';
-
+for ii = 1:5
+switch ii
+    case 1
+        % % Personalize figure name
+        fac_processingNoise = 1; % 0.1, 1, 10
+        modelType = 'circularMotion';
+        figName = modelType;
+    case 2
+        fac_processingNoise = 1; % 0.1, 1, 10
+        modelType = 'constAcc';
+        figName = modelType;
+    case 3
+        fac_processingNoise = 1; % 0.1, 1, 10
+        modelType = 'constVel';
+        figName = modelType;
+    case 4
+        fac_processingNoise = 10; % 0.1, 1, 10
+        modelType = 'circularMotion';
+        figName = '_procNoise10';
+    case 5
+        fac_processingNoise = 0.1; % 0.1, 1, 10
+        modelType = 'circularMotion';
+        figName = '_procNoise01';
+end
+ 
+clear x_KF innovation sigma_pred x_simu
 
 for iter = 1:2 % change to 2
+    iter =1;
     %% Measurement Simulation
     [acc, gyro, x_real, v_real, phi_real, time] = ... 
                IMUsens_simulation(samplingFreq, omega0, r_circ, phi0, azim_init);
@@ -102,6 +100,7 @@ plot(x_KF(2,:, iter),x_KF(1,:, iter),'g-x')
 ylabel('North [m]'); xlabel('East [m]')
 legend('Real measurement', 'Simulation 1', 'Simulation 2','Kalman Filter 1', 'Kalman Filter 2')
 axis equal;
+grid on;
 print(strcat('fig/kalmanFilter_sigma',figName),'-depsc')
 
 %% I. Velocity distribution error
@@ -115,12 +114,14 @@ plot(time,x_KF(3,1:end-2,1),'r'); hold on;
 plot(time,x_KF(3,1:end-2,2),'g'); hold on;
 plot(time,v_real(1,:),'b'); hold on;
 ylabel('Velocity North [m/s]')
+grid on;
 subplot(2,1,2)
 plot(time,x_KF(4,1:end-2,1),'r'); hold on;
 plot(time,x_KF(4,1:end-2,2),'g'); hold on;
 plot(time,v_real(2,:),'b'); hold on;
 ylabel('Velocity East [m/s]')
 xlabel('Time [s]')
+grid on;
 print('fig/distribution_velocity','-depsc')
 
 figure('Position',[100,200,800,700]);
@@ -130,11 +131,13 @@ subplot(2,1,1)
 plot(time,x_KF(3,1:end-2,1)-v_real(1,:),'r'); hold on;
 plot(time,x_KF(3,1:end-2,2)-v_real(1,:),'g'); hold on;
 ylabel('Velocity North [m/s]')
+grid on;
 subplot(2,1,2)
 plot(time,x_KF(4,1:end-2,1)-v_real(2,:),'r'); hold on;
 plot(time,x_KF(4,1:end-2,2)-v_real(2,:),'g'); hold on;
 ylabel('Velocity East [m/s]')
 xlabel('Time [s]')
+grid on;
 
 print(strcat('fig/distribution_velocityError',figName),'-depsc')
 
@@ -163,6 +166,7 @@ for iter = 1:size(sigma_pred,2)
 end
 xlabel('Time [s]')
 legend('Simulation 1','Simulation 2')
+grid on;
 
 print(strcat('fig/KF_predictSTD',figName),'-depsc')
 
@@ -187,8 +191,9 @@ histMax = 50;
 xLims = xlim;
 xVals = linspace(xLims(1),xLims(2), N_vals);
 f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist);
-plot(xVals, f_norm, 'k--')
+%plot(xVals, f_norm, 'k--')
 xlabel('Radius [m/s]')
+grid on;
 legend('Simulation 1','Simulation 2')
 
 subplot(2,1,2)
@@ -205,10 +210,9 @@ histMax = 50;
 xLims = xlim;
 xVals = linspace(xLims(1),xLims(2), N_vals);
 f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist);
-plot(xVals, f_norm, 'k--')
+%plot(xVals, f_norm, 'k--')
 xlabel('Orientation [m/s]')
-
-
+grid on;
 
 print(strcat('fig/histogramm_innovation_all',figName),'-depsc')
 
@@ -231,9 +235,10 @@ histMax = 50;
 xLims = xlim;
 xVals = linspace(xLims(1),xLims(2), N_vals);
 f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist);
-plot(xVals, f_norm, 'k--')
+%plot(xVals, f_norm, 'k--')
 xlabel('Innovation North [m/s]')
 legend('Simulation 1','Simulation 2')
+grid on;
 
 subplot(2,1,2)
 ii = 1; dimen = 2;
@@ -249,8 +254,9 @@ histMax = 50;
 xLims = xlim;
 xVals = linspace(xLims(1),xLims(2), N_vals);
 f_norm = histMax*1/(std_hist*sqrt(2*pi)).*exp(-0.5*(xVals-mean_hist).^2/std_hist);
-plot(xVals, f_norm, 'k--')
+%plot(xVals, f_norm, 'k--')
 xlabel('Innovation East [m/s]')
+grid on;
 
 print(strcat('fig/histogramm_innovation_cut_',figName),'-depsc')
 
@@ -287,3 +293,4 @@ print(strcat('fig/histogramm_innovation_cut_',figName),'-depsc')
 % plot(time,squeeze(innovation(dim,1:end,iter))); hold on;
 % plot([time(1), time(end)],[2*pi,2*pi],'k--')
 % plot([time(1), time(end)],(-1)*[2*pi,2*pi],'k--')
+end
