@@ -47,11 +47,11 @@ switch ii
         modelType = 'constVel';
         figName = modelType;
     case 4
-        fac_processingNoise = 10; % 0.1, 1, 10
+        fac_processingNoise = 100; % 0.1, 1, 10
         modelType = 'circularMotion';
         figName = '_procNoise10';
     case 5
-        fac_processingNoise = 0.1; % 0.1, 1, 10
+        fac_processingNoise = 0.01; % 0.1, 1, 10
         modelType = 'circularMotion';
         figName = '_procNoise01';
 end
@@ -59,7 +59,6 @@ end
 clear x_KF innovation sigma_pred x_simu
 
 for iter = 1:2 % change to 2
-    iter =1;
     %% Measurement Simulation
     [acc, gyro, x_real, v_real, phi_real, time] = ... 
                IMUsens_simulation(samplingFreq, omega0, r_circ, phi0, azim_init);
