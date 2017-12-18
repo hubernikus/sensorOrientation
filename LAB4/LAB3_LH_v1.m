@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%           Sensor Orientation - LAB 5 
+%           Sensor Orientation - LAB 5
 %           EPFL
 %
 %           Author: Huber Lukas
@@ -31,14 +31,14 @@ b_A = 1;                %[mg]
 sigma_A_vel = 50;       % [mu g/ /sqrt(Hz)]
 
 % Rescale to SI units
-b_g = b_g/180*pi/3600 
+b_g = b_g/180*pi/3600
 simga_G_GM = simga_G_GM/180*pi*sqrt(samplingFreq)
 beta_G_inv = beta_G_inv
 sigma_G_vel = sigma_G_vel/180*pi*1/sqrt(3600)*sqrt(samplingFreq)
 b_A = b_A * g * 1e-3
 sigma_A_vel = sigma_A_vel * 1e-6 * g * sqrt(samplingFreq)
 
-%% Ex 2 
+%% Ex 2
 % Initial conditions
 omega0 = pi/100;     % [rad/s]
 r_circ = 500;       % [m]
@@ -49,9 +49,9 @@ vel0 = [-omega0*r_circ;0]; % initial velocity
 initHeading = [phi0+azim_init];
 
 % Simulate Measurement
-[acc, gyro, x_real, v_real, phi_real, time] = ... 
+[acc, gyro, x_real, v_real, phi_real, time] = ...
            IMUsens_simulation(samplingFreq, omega0, r_circ, phi0, azim_init);
-             
+
 % Add different noise on measurement
 % Number of samples
 N_samples = length(acc);
@@ -74,7 +74,7 @@ acc_bias = ones(2, N_samples) * b_A;
 % Accelerometer noise
 acc_noise = whiteNoiseGen(N_samples, 2, sigma_A_vel);
 
-acc_errors = acc + acc_bias + acc_noise; 
+acc_errors = acc + acc_bias + acc_noise;
 
 %%
 close all;
@@ -83,7 +83,7 @@ i = 1;
 intOrder = 2;
 [x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc, gyro_errors, time,intOrder);
 
-i = 2; 
+i = 2;
 [x_sim{i}, v_sim{i}, phi_sim{i}] = inertialNavigation(x0, vel0, initHeading, acc_errors, gyro, time,intOrder);
 
 i = 3
@@ -127,13 +127,13 @@ gyro_partError = gyro + gyro_randomWalk;
 
 fprintf('acc_bias: \n')
 i = 7;
-acc_partError = acc + acc_bias; 
+acc_partError = acc + acc_bias;
 [x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc_partError, gyro, time,intOrder);
 [posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
 
 fprintf('acc_noise: \n')
 i = 8;
-acc_partError = acc + acc_noise; 
+acc_partError = acc + acc_noise;
 [x_sim, v_sim, phi_sim] = inertialNavigation(x0, vel0, initHeading, acc_partError, gyro, time,intOrder);
 [posErr(i), velErr(i), angErr(i)] = createErrorPlot(x_sim, x_real, v_sim, v_real, phi_sim, phi_real)
 
