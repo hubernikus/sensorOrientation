@@ -18,7 +18,7 @@ figName ='';
 g = 9.81; % [m/s^2] - Gravity
 
 %% Simulation Parameters
-freq_IMU = 100; % [Hz]
+freq_IMU = 2; % [Hz]
 dt_kf = 1/freq_IMU;
 
 %samplingFreq = 1; % [Hz]
@@ -28,7 +28,7 @@ t_start = 0;
 %dt_kf_list = [1,0.1];
 
 % Initial conditions
-omega0 = pi/100;     % Angular Rate [rad/s]
+omega0 = pi/100;     % Angular Rate +[rad/s]
 r_circ = 500;       % [m]
 
 azim_init = 90/180*pi; % [rad]
@@ -41,7 +41,7 @@ initHeading = [phi0+azim_init];
 pos_0 = [r_circ,0];
 vel_0 = [0, omega0*r_circ];
 
-[acc, gyro, x_real, v_real, phi_real, time_imu] = ...
+[acc, gyro, x_real, v_real, ~, time_imu] = ...
             IMUsens_simulation(freq_IMU, omega0, r_circ, phi0, azim_init);
 
 %% 2 - Add noise to IMU measurement
