@@ -60,7 +60,7 @@ plot_tild = plot(X_tild(5,1:it_imu),X_tild(4,1:it_imu),'r-x');
 legend('GPS simulation','Filtered estimation','Prediction with IMU')
 
 %while(time_gpsn(it_gps) <= timeFinal)
-while(it_gps <= N_gps)
+while(it_gps <= N_gps-1)
     % Mesurement --- z, R ----
 
     % Gain (weight)
@@ -68,11 +68,11 @@ while(it_gps <= N_gps)
 
     % State update
     dZ = (x_gps(:,it_gps)- H_k*X_tild(:,it_imu));
-    %innovation(:,it_gps) = (dZ- H_k*dX_tild(:,it_imu));
-    innovation(:,it_gps) = (dZ- 0);
+    innovation(:,it_gps) = (dZ- H_k*dX_tild(:,it_imu));
+    %innovation(:,it_gps) = (dZ- 0);
     
-    %dX_filt(:, it_gps+1) = dX_tild(:,it_imu) + K_k*innovation(:,it_gps);
-    dX_filt(:, it_gps+1) = 0 + K_k*innovation(:,it_gps);
+    dX_filt(:, it_gps+1) = dX_tild(:,it_imu) + K_k*innovation(:,it_gps);
+    %dX_filt(:, it_gps+1) = 0 + K_k*innovation(:,it_gps);
     X_filt(:, it_gps+1) = X_tild(:, it_imu) + dX_filt(:, it_gps+1) ...
                                 *(time_imu(it_imu+1)-time_imu(it_imu));
     %dX_filt(:, it_gps+1)  = 0;
