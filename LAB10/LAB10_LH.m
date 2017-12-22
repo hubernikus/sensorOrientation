@@ -43,9 +43,10 @@ vel_0 = [0, omega0*r_circ];
 
 [acc, gyro, x_real, v_real, ~, time_imu] = ...
             IMUsens_simulation(freq_IMU, omega0, r_circ, phi0, azim_init);
-
+acc_simu = acc;
+gyro_simu = gyro;
 %% 2 - Add noise to IMU measurement
-[acc_simu, gyro_simu, init_errorVariables] ...
+[acc_simu1, gyro_simu1, init_errorVariables] ...
                     = IMUsens_errors(acc, gyro, freq_IMU);
 
 figure('Position',[50,50,800,1000]);
@@ -64,7 +65,7 @@ plot(time_imu,acc_simu(2,:), 'b'); hold on; grid on;
 xlim([time_imu(1),time_imu(end)])
 ylabel('Acceleromter east[m/s^2]')
 xlabel('Time [s]')
-grid on;
+grid on;    
 close all;
 
 if figSave; print(strcat('fig/acc_gyro_simu',figName),'-depsc'); end
@@ -84,6 +85,7 @@ time_gps = time_imu(:,indGPS);
 
 pos_gps_simu = pos_gps + [whiteNoiseGen(size(pos_gps,2),1,simga_x_gps); 
                                 whiteNoiseGen(size(pos_gps,2),1,simga_y_gps)];
+pos_gps_simu = pos_gps;
 
 %% 4 - Kalman Initialization
 p_GPS_0 = pos_gps_simu(:,1); 
@@ -95,7 +97,7 @@ p_GPS_0 = pos_gps_simu(:,1);
 close all;
 [x_filt, innovation, sigma_pred, x_tild] ...
             = kalmanFilter_differential(model, X_init, dX_init, pos_gps_simu, [gyro_simu;acc_simu], time_gps, time_imu, init_errorVariables);
-%%
+%
 % Rotational plot
 figure('Position',[100,200,800,700]);
 set(groot,'DefaultAxesFontSize',14)
@@ -104,7 +106,7 @@ plot(pos_gps_simu(2,:),pos_gps_simu(1,:),'bo'); hold on;
 plot(x_filt(5,:),x_filt(4,:),'g-x'); hold on;
 plot(x_tild(5,:),x_tild(4,:),'r-x');
 ylabel('North [m]'); xlabel('East [m]')
-legend('Real measurement','Kalman Filter', 'Prediction')
+legend('GPS measurement','Kalman Filter', 'IMU integration')
 axis equal;
 grid on;
 

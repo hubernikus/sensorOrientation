@@ -1,5 +1,6 @@
 function [X_filt, innovation, sigma_pred, X_tild] ...
             = kalmanFilter_differential(model, x_init, dx_init, x_gps, meas_imu, time_gps, time_imu, err)
+        
 % Extract variables from model
 P = model.P0;
 F = model.F;
@@ -26,8 +27,8 @@ X_filt = zeros(dimX, N_gps) ;
 innovation = zeros(dimZ,N_gps);
 sigma_pred = zeros(dimX, N_gps);
 
-dX_tild = zeros(dimX,N_imu);
 X_tild = zeros(dimX,N_imu);
+dX_star = zeros(dimX,N_imu);
 X_star = zeros(dimX,N_imu);
 
 
@@ -37,7 +38,7 @@ X_tild(:,1) = x_init;
 X_star(:,1) = x_init;
 
 dX_filt(:,1) = dx_init;
-dX_tild(:,1) = dx_init;
+dX_star(1:5,1) = dx_init(1:5);
 
 % Initialization
 % Prediction
@@ -68,10 +69,11 @@ while(it_gps <= N_gps-1)
 
     % State update
     dZ = (x_gps(:,it_gps)- H_k*X_tild(:,it_imu));
-    innovation(:,it_gps) = (dZ- H_k*dX_tild(:,it_imu));
+    %innovation(:,it_gps) = (dZ- H_k*dX_filt(:,it_gps));
     %innovation(:,it_gps) = (dZ- 0);
     
-    dX_filt(:, it_gps+1) = dX_tild(:,it_imu) + K_k*innovation(:,it_gps);
+    %dX_filt(:, it_gps+1) = dX_filt(:,it_gps) + K_k*innovation(:,it_gps);
+    dX_filt(:, it_gps+1) =  K_k*dZ;
     %dX_filt(:, it_gps+1) = 0 + K_k*innovation(:,it_gps);
     X_filt(:, it_gps+1) = X_tild(:, it_imu) + dX_filt(:, it_gps+1) ...
                                 *(time_imu(it_imu+1)-time_imu(it_imu));
@@ -81,6 +83,8 @@ while(it_gps <= N_gps-1)
     
     set(plot_filt,'XData',X_filt(5,1:it_gps+1),'YData',X_filt(4,1:it_gps+1));
     X_tild(:, it_imu) = X_filt(:, it_gps+1); % Replace X_tild, with filtered state
+    %X_tild(:,it_imu) = X_star(:,it_imu); 
+    %X_star(:,it_imu) = X_tild(:,it_imu);
     
     % Covariance update
     P = (eye(dimX)- K_k*H_k)*P_tilde;
@@ -96,15 +100,16 @@ while(it_gps <= N_gps-1)
         % Output ---- x_est, P ---
         
         % Prediction x_dot
-        X_star(:,it_imu+1) = X_star(:,it_imu);
-        [X_star(1:5,it_imu+1)] = ...
-            inertialNavigationStep(X_star(1:5,it_imu), ...
+        %X_star(:,it_imu+1) = X_star(:,it_imu);
+        [X_star(:,it_imu+1),dX_star(:,it_imu+1)] = ...
+            inertialNavigationStep(X_star(:,it_imu), ...
                                     acc(:,it_imu), gyro(it_imu), (time_imu(it_imu+1)-time_imu(it_imu)));
         
-        alpha = X_star(1,it_imu+1);
-        R_3 = [cos(alpha), -sin(alpha); sin(alpha),cos(alpha)];
+        alpha(it_imu) = X_star(1,it_imu+1);
+        R_3 = [cos(alpha(it_imu)), -sin(alpha(it_imu)); 
+            sin(alpha(it_imu)),cos(alpha(it_imu))];
         acc_m = R_3*acc(:,it_imu);
-        
+
         F11 = [0 0 0 0 0; 
                -acc_m(1) 0 0 0 0;
                acc_m(2) 0 0 0 0;
@@ -114,8 +119,8 @@ while(it_gps <= N_gps-1)
         F21 = zeros(4,5);
 
         F12 = [1 1 0 0; 
-               0 0 cos(alpha) -sin(alpha);
-               0 0 sin(alpha) cos(alpha);
+               0 0 cos(alpha(it_imu)) -sin(alpha(it_imu));
+               0 0 sin(alpha(it_imu)) cos(alpha(it_imu));
                0 0 0 0;
                0 0 0 0];
 
@@ -124,8 +129,8 @@ while(it_gps <= N_gps-1)
         model.F = [F11,F12; F21,F22];
 
         G11 = [1 0 0;
-               0 cos(alpha) -sin(alpha);
-               0 sin(alpha) cos(alpha);
+               0 cos(alpha(it_imu)) -sin(alpha(it_imu));
+               0 sin(alpha(it_imu)) cos(alpha(it_imu));
                0 0 0;
                0 0 0];
 
@@ -148,15 +153,16 @@ while(it_gps <= N_gps-1)
 
         % Prediction
         if(firstInnerLoop) % first round take measurement
-            dX_tild(:,it_imu+1) = Phi*dX_filt(:,it_gps+1);
+            %dX_tild(:,it_imu+1) = Phi* (:,it_gps+1);
             P_tilde = Phi*P*Phi' + Q_k;
 
         else    % take prediction after
-            dX_tild(:,it_imu+1) = Phi*dX_tild(:,it_imu);
+            %dX_tild(:,it_imu+1) = Phi*dX_tild(:,it_it_gpsimu);
             P_tilde = Phi*P_tilde*Phi' + Q_k;
             
         end
-        X_tild(:, it_imu+1) = X_filt(:, it_gps) + dX_tild(:, it_imu+1);
+        X_tild(:, it_imu+1) = X_tild(:, it_imu) ...
+                + dX_star(:, it_imu+1)*(time_imu(it_imu+1)-time_imu(it_imu));
                 
         it_imu = it_imu+1;
         set(plot_tild,'XData',X_tild(5,1:it_imu),'YData',X_tild(4,1:it_imu));
@@ -167,4 +173,20 @@ while(it_gps <= N_gps-1)
    it_gps = it_gps+1;
 
 end
+X_filt = X_star;
+figure;
+plot(time_imu(1:length(alpha)),alpha); 
+hold on; grid on;
+plot(time_imu(1:length(gyro)),gyro);
+
+legend('Alpha', 'Gyro')
+grid on;
+
+figure;
+plot(time_imu(1:length(alpha)),alpha); 
+hold on; grid on;
+plot(time_imu(1:length(gyro)),gyro);
+
+legend('Alpha', 'Gyro')
+grid on;
 end
