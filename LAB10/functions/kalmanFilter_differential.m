@@ -4,8 +4,8 @@ function [X_filt, innovation, sigma_pred, X_tild] ...
 P = model.P0;
 F = model.F;
 G = model.G;
-dimX = model.dimZ;
-dimZ = model.dimX;
+dimX = model.dimX;
+dimZ = model.dimZ;
 R = model.R;
 W = model.W;
 H_k = model.H;
@@ -16,16 +16,25 @@ Q_k = model.Q0;
 N_gps = size(time_gps,2);
 N_imu = size(time_imu,2);
 
-dX_filt = zeros(dimZ, N_gps) ;
-X_filt = zeros(dimZ, N_gps) ;
-innovation = zeros(dimX,N_gps);
-sigma_pred = zeros(dimZ, N_gps);
-dX_tild = zeros(dimZ,N_imu);
-X_tild = zeros(dimZ,N_imu);
+gyro = meas_imu(1,:);
+acc = meas_imu(2:3,:);
+
+
+dX_filt = zeros(dimX, N_gps) ;
+X_filt = zeros(dimX, N_gps) ;
+
+innovation = zeros(dimZ,N_gps);
+sigma_pred = zeros(dimX, N_gps);
+
+dX_tild = zeros(dimX,N_imu);
+X_tild = zeros(dimX,N_imu);
+X_star = zeros(dimX,N_imu);
+
 
 % First values 
 X_filt(:,1) = x_init;
 X_tild(:,1) = x_init;
+X_star(:,1) = x_init;
 
 dX_filt(:,1) = dx_init;
 dX_tild(:,1) = dx_init;
@@ -38,14 +47,14 @@ sigma_pred(1) = sqrt(sum(diag(P)));
 
 % Iteration counter variables
 it_gps = 1;
-it_imu = 2;
+it_imu = 1;
 firstInnerLoop = true;
 
 figure('Position',[100 100 800 800])
 %plot_gps = plot(x_gps(2,1:it_gps),x_gps(1,1:it_gps),'bo'); 
 plot_gps = plot(x_gps(2,:),x_gps(1,:),'bo'); 
 hold on; grid on; axis equal;
-%   xlim([-600,600]); ylim([-600,600]);
+ylim([400,600]); xlim([-50,150]);
 plot_filt = plot(X_filt(5,1:it_gps),X_filt(4,1:it_gps),'g-x');
 plot_tild = plot(X_tild(5,1:it_imu),X_tild(4,1:it_imu),'r-x');
 legend('GPS simulation','Filtered estimation','Prediction with IMU')
@@ -58,34 +67,43 @@ while(it_gps <= N_gps)
     K_k = P_tilde*H_k'/(H_k*P_tilde*H_k' + R);
 
     % State update
-    innovation(:,it_gps) = (x_gps(:,it_gps)- H_k*X_tild(:,it_imu));
+    dZ = (x_gps(:,it_gps)- H_k*X_tild(:,it_imu));
+    %innovation(:,it_gps) = (dZ- H_k*dX_tild(:,it_imu));
+    innovation(:,it_gps) = (dZ- 0);
     
-    dX_filt(:, it_gps+1) = dX_tild(:,it_imu) + K_k*innovation(:,it_gps);
-    X_filt(:, it_gps+1) = X_filt(:, it_gps) + dX_filt(:, it_gps+1);
-    X_tild(:, it_imu) = X_filt(:, it_gps) + dX_filt(:, it_gps+1); % Replace X_tild, with filtered state
+    %dX_filt(:, it_gps+1) = dX_tild(:,it_imu) + K_k*innovation(:,it_gps);
+    dX_filt(:, it_gps+1) = 0 + K_k*innovation(:,it_gps);
+    X_filt(:, it_gps+1) = X_tild(:, it_imu) + dX_filt(:, it_gps+1) ...
+                                *(time_imu(it_imu+1)-time_imu(it_imu));
+    %dX_filt(:, it_gps+1)  = 0;
+    
+    %X_star(:, it_imu) = X_star(:, it_gps) + dX_filt(:, it_gps+1); % Replace X_tild, with filtered state
     
     set(plot_filt,'XData',X_filt(5,1:it_gps+1),'YData',X_filt(4,1:it_gps+1));
-
+    X_tild(:, it_imu) = X_filt(:, it_gps+1); % Replace X_tild, with filtered state
+    
     % Covariance update
-    P = (eye(dimZ)- K_k*H_k)*P_tilde;
+    P = (eye(dimX)- K_k*H_k)*P_tilde;
 
     % KF-predicted
     sigma_pred(it_gps+1) = sqrt(sum(diag(P)));
 
     % Prediction - Inner Loop
     % Output ---- x_est, P ---
-    alpha = X_filt(1,it_gps+1);
-
+    
     firstInnerLoop = true; % first Time doing the inner loop
-    while(time_imu(it_imu) <= time_gps(it_gps) ) % bigger or bigger equal???
+    while(time_imu(it_imu) <= time_gps(it_gps+1) ) % bigger or bigger equal???
         % Output ---- x_est, P ---
         
-        % Prediction
-        if(firstInnerLoop) % first round take GPS comparison
-
-        end
+        % Prediction x_dot
+        X_star(:,it_imu+1) = X_star(:,it_imu);
+        [X_star(1:5,it_imu+1)] = ...
+            inertialNavigationStep(X_star(1:5,it_imu), ...
+                                    acc(:,it_imu), gyro(it_imu), (time_imu(it_imu+1)-time_imu(it_imu)));
+        
+        alpha = X_star(1,it_imu+1);
         R_3 = [cos(alpha), -sin(alpha); sin(alpha),cos(alpha)];
-        acc_m = R_3*meas_imu(2:3,it_imu)
+        acc_m = R_3*acc(:,it_imu);
         
         F11 = [0 0 0 0 0; 
                -acc_m(1) 0 0 0 0;
@@ -121,12 +139,12 @@ while(it_gps <= N_gps)
         
         % Auxiliary matrix A
         A = [-F, G*W*G'; ...
-             zeros(dimZ), F'] * (time_imu(it_imu+1)-time_imu(it_imu));
+             zeros(dimX), F'] * (time_imu(it_imu+1)-time_imu(it_imu));
 
         B = expm(A);
 
-        Phi = B(dimZ+1:2*dimZ,dimZ+1:2*dimZ)';
-        Q_k = Phi*B(1:dimZ,dimZ+1:2*dimZ);
+        Phi = B(dimX+1:2*dimX,dimX+1:2*dimX)';
+        Q_k = Phi*B(1:dimX,dimX+1:2*dimX);
 
         % Prediction
         if(firstInnerLoop) % first round take measurement
@@ -138,12 +156,11 @@ while(it_gps <= N_gps)
             P_tilde = Phi*P_tilde*Phi' + Q_k;
             
         end
-        X_tild(:, it_imu+1) = X_tild(:, it_imu) + dX_tild(:, it_imu+1);
+        X_tild(:, it_imu+1) = X_filt(:, it_gps) + dX_tild(:, it_imu+1);
                 
-        alpha = X_tild(1,it_imu);
-        firstInnerLoop = false;
         it_imu = it_imu+1;
         set(plot_tild,'XData',X_tild(5,1:it_imu),'YData',X_tild(4,1:it_imu));
+        firstInnerLoop = false;
     end
    %set(plot_gps,'XData',x_gps(2,1:it_gps-1),'YData',x_gps(1,1:it_gps-1));
     % increment counter

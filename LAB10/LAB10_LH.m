@@ -86,13 +86,13 @@ pos_gps_simu = pos_gps + [whiteNoiseGen(size(pos_gps,2),1,simga_x_gps);
                                 whiteNoiseGen(size(pos_gps,2),1,simga_y_gps)];
 
 %% 4 - Kalman Initialization
-p_GPS_0 = pos_gps_simu(:,1);
+p_GPS_0 = pos_gps_simu(:,1); 
 
 [model, X_init, dX_init] ...
             = init_kalmanFilter(dt_kf, r_circ, omega0,[gyro_simu(1);acc_simu(:,1)], sigma_gps, p_GPS_0, init_errorVariables);
 
 %% 4 - Kalman filter loop
-
+close all;
 [x_filt, innovation, sigma_pred, x_tild] ...
             = kalmanFilter_differential(model, X_init, dX_init, pos_gps_simu, [gyro_simu;acc_simu], time_gps, time_imu, init_errorVariables);
 %%

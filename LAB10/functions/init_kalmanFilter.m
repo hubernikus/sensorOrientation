@@ -9,7 +9,7 @@ model.dimZ = 2;
 model.dimX = 9;
 
 % x [n x 1]- State vector
-% x = [alpha, v_n, v_e, p_n, p_e, ...]';
+% x = [alpha, v_    n, v_e, p_n, p_e, ...]';
 dX_init = [3*pi/180;-2;-1;0;0; ...
            err.gyro_bias; err.gyro_GM1.initSigma; ...
            err.acc1_GM1.initSigma; err.acc2_GM1.initSigma]; % initial error 
